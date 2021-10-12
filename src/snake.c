@@ -6,26 +6,15 @@
 Snake snake_init() {
     Snake snake = {
         .dx = CELL_WIDTH,
-        .dy = 0
+        .dy = 0,
+        .body = {
+            {200, 200, 1},
+            {190, 200, 1},
+            {180, 200, 1},
+            {170, 200, 1},
+            {160, 200, 1}
+        }
     };
-
-    BodyPart empty = {0};
-    for (int i = 0; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
-        game.snake.body[i] = empty;
-    }
-
-    BodyPart p1 = {200, 200, 1};
-    BodyPart p2 = {190, 200, 1};
-    BodyPart p3 = {180, 200, 1};
-    BodyPart p4 = {170, 200, 1};
-    BodyPart p5 = {160, 200, 1};
-
-    snake.body[0] = p1;
-    snake.body[1] = p2;
-    snake.body[2] = p3;
-    snake.body[3] = p4;
-    snake.body[4] = p5;
-
     return snake;
 }
 
