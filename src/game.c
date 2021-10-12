@@ -10,7 +10,7 @@ void initialize(void) {
 		exit(1);
   }
 
-  game.window = SDL_CreateWindow("Snake", 
+  game.window = SDL_CreateWindow("Score: 0", 
     SDL_WINDOWPOS_UNDEFINED, 
     SDL_WINDOWPOS_UNDEFINED, 
     SCREEN_WIDTH, 
@@ -36,7 +36,6 @@ void initialize(void) {
   game.score = 0;
   game.state = PLAYING;
   spawn_food();
-  display_score();
 }
 
 void terminate(void) {
