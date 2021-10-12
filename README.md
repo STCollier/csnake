@@ -1,11 +1,14 @@
 # Snake Game (Made with C and SDL 2.0)
-Snake is a classic video game from the late 70s. The goal is to navigate a snake and eat as many apples as possible without touching the walls or the snake’s body.
+Snake is a classic video game from the late 70s and became popular when Snake 2 was bundled with the Nokia 3310 in 2000.
 
-## Instructions
+![Snake Game](snake.gif)
 
-- Move the Snake with the <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> arrow keys.
+## How to Play
+The goal is to navigate the snake and eat as many apples as possible without touching the walls or the snake's body.
+
+- Move the Snake with the <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> arrow keys.
 - Press <kbd>esc</kbd> to exit the game.
-- Press <kbd>Space</kbd> to pause/resume the game or start a new game when Game Over.
+- Press <kbd>space</kbd> to pause/resume the game (or to start a new game when the snake has died).
 
 ## Building
 Before you can build this project, you will need to install **SDL 2** on your machine. It can be installed on macOS with Homebrew using the command.
