@@ -130,7 +130,7 @@ void move_snake(void) {
     // remove tail if not growing.
     if (!hit_food()) {
         for (int i = 0; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
-            if (game.snake.body[i].x == 0) {
+            if (game.snake.body[i].x == 0 && game.snake.body[i].y == 0) {
                 game.snake.body[i-1].x = 0; 
                 game.snake.body[i-1].y = 0;
                 break;
@@ -178,27 +178,25 @@ void draw_world(void) {
 void draw_snake(void) {
     // render the snake body
     for (int i = 1; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
-        if (game.snake.body[i].x != 0) {
-          SDL_Rect body = game.snake.body[i];
+        if (game.snake.body[i].x != 0 && game.snake.body[i].y != 0) {
           // make each snake cell green or red when dead
           if (game.state == GAME_OVER) {
             SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
           } else {
             SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
           }
-          SDL_RenderFillRect(game.renderer, &body);
+          SDL_RenderFillRect(game.renderer, &game.snake.body[i]);
           
           // create a black border around each snake cell
           SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
-          SDL_RenderDrawRect(game.renderer, &body);
+          SDL_RenderDrawRect(game.renderer, &game.snake.body[i]);
         }
     }
 
     // render head
     if (game.state != GAME_OVER) {
-        SDL_Rect body = game.snake.body[0];
         SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
-        SDL_RenderFillRect(game.renderer, &body);
+        SDL_RenderFillRect(game.renderer, &game.snake.body[0]);
     }
 }
 
@@ -228,7 +226,8 @@ void spawn_food(void) {
 
     // only spawn the food if it does not touch the snake
     for (int i = 0; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
-        if (game.snake.body[i].x == 0) {
+        // exit loop when at the end of the active elements of the snake body
+        if (game.snake.body[i].x == 0 && game.snake.body[i].y == 0) {
           break;
         }
         if (game.snake.body[i].x == game.food.x && game.snake.body[i].y == game.food.y) {
@@ -283,9 +282,11 @@ void change_direction(SDL_KeyCode new_direction) {
 int is_dead(void) {
     // hit snake?
     for (int i = 1; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
-        if (game.snake.body[i].x == 0) {
+        // exit loop when at the end of the active elements of the snake body
+        if (game.snake.body[i].x == 0 && game.snake.body[i].y == 0) {
             break;
         }
+        // check the head has not run into active body elements
         if (game.snake.body[0].x == game.snake.body[i].x 
           && game.snake.body[0].y == game.snake.body[i].y) {
               return 1;
@@ -312,6 +313,7 @@ int is_dead(void) {
 }
 
 int hit_food(void) {
+    // check is the snake head has hit a cell containing food
     if (game.food.x == game.snake.body[0].x && game.food.y == game.snake.body[0].y) {
         game.score++;
         spawn_food();
