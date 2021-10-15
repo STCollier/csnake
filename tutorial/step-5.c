@@ -19,6 +19,7 @@ void draw_walls(void);
 void draw_snake(void);
 void spawn_snake(void);
 void move_snake(void);
+void change_direction(SDL_KeyCode new_direction);
 
 typedef struct {
   SDL_Renderer *renderer;
@@ -114,6 +115,13 @@ void handle_input() {
     if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)) {
       game.running = 0;
     }
+    // change the snake direction
+    if (e.type == SDL_KEYDOWN && (e.key.keysym.sym == SDLK_UP 
+                              || e.key.keysym.sym == SDLK_DOWN 
+                              || e.key.keysym.sym == SDLK_LEFT
+                              || e.key.keysym.sym == SDLK_RIGHT)) {
+        change_direction(e.key.keysym.sym);
+    }
   }
 }
 
@@ -190,7 +198,7 @@ void spawn_snake() {
 }
 
 void move_snake(void) {
-  // shift all elements right to make room for new head at the beginning
+  // shift elements to right to make room for new head
   for (int i = sizeof(game.snake)/sizeof(game.snake[0])-1; i >= 0; i--) {
     game.snake[i] = game.snake[i-1];
   }
@@ -216,4 +224,33 @@ void move_snake(void) {
   // TODO: 
   // if the Snake ate food don't remove tail and increase score
   // Check if the Snake is Dead
+}
+
+void change_direction(SDL_KeyCode new_direction) {
+  // work out what direction the snake is going
+  int going_up = game.dy == -CELL_HEIGHT;
+  int going_down = game.dy == CELL_HEIGHT;
+  int going_left = game.dx == -CELL_WIDTH;
+  int going_right = game.dx == CELL_WIDTH;
+
+  // change the direction to up when the snake is not going down
+  if (new_direction == SDLK_UP && !going_down) {
+      game.dx = 0;
+      game.dy = -CELL_HEIGHT;
+  }
+  // change the direction to down when the snake is not going up
+  if (new_direction == SDLK_DOWN && !going_up) {
+      game.dx = 0;
+      game.dy = CELL_HEIGHT;
+  }
+  // change the direction to left when the snake is not going right
+  if (new_direction == SDLK_LEFT && !going_right) {
+      game.dx = -CELL_WIDTH;
+      game.dy = 0;
+  }
+  // change the direction to right when the snake is not going left
+  if (new_direction == SDLK_RIGHT && !going_left) {
+      game.dx = CELL_WIDTH;
+      game.dy = 0;
+  }
 }

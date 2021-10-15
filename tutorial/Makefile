@@ -13,3 +13,6 @@ step-3:
 step-4:
 	cc -o snake step-4.c $(CFLAGS) $(CLIBS)
 	./snake
+step-5:
+	cc -o snake step-5.c $(CFLAGS) $(CLIBS)
+	./snake
