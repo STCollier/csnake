@@ -4,38 +4,38 @@
 Game game;
 
 void initialize(void) {
-
-  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-    printf("error: failed to initialize SDL: %s\n", SDL_GetError());
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("error: failed to initialize SDL: %s\n", SDL_GetError());
 		exit(1);
-  }
+    }
 
-  game.window = SDL_CreateWindow("Score: 0", 
-    SDL_WINDOWPOS_UNDEFINED, 
-    SDL_WINDOWPOS_UNDEFINED, 
-    SCREEN_WIDTH, 
-    SCREEN_HEIGHT,
-    SDL_WINDOW_SHOWN);
+    game.window = SDL_CreateWindow("Score: 0", 
+        SDL_WINDOWPOS_UNDEFINED, 
+        SDL_WINDOWPOS_UNDEFINED, 
+        SCREEN_WIDTH, 
+        SCREEN_HEIGHT,
+        SDL_WINDOW_SHOWN
+    );
 
 	if (!game.window) {
 		printf("error: failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
 		exit(2);
 	}
 
-  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-  game.renderer = SDL_CreateRenderer(game.window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    game.renderer = SDL_CreateRenderer(game.window, -1, SDL_RENDERER_ACCELERATED);
 
-	if (!game.renderer) {
-		printf("error: failed to create renderer: %s\n", SDL_GetError());
-		exit(3);
-	}
+    if (!game.renderer) {
+        printf("error: failed to create renderer: %s\n", SDL_GetError());
+        exit(3);
+    }
 
-  game.food.w = CELL_WIDTH;
-  game.food.h = CELL_HEIGHT;
-  game.snake = snake_init();
-  game.score = 0;
-  game.state = PLAYING;
-  spawn_food();
+    game.food.w = CELL_WIDTH;
+    game.food.h = CELL_HEIGHT;
+    game.snake = snake_init();
+    game.score = 0;
+    game.state = PLAYING;
+    spawn_food();
 }
 
 void terminate(void) {

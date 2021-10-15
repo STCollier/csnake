@@ -1,7 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
-#define SCREEN_WIDTH   400
+#define SCREEN_WIDTH   680
 #define SCREEN_HEIGHT  400
 #define WALL_WIDTH      20
 #define WALL_HEIGHT     20
