@@ -61,7 +61,6 @@ int main() {
   initialize();
 
   spawn_snake();
-  spawn_food();
   update_title();
 
   // enter game loop
@@ -141,6 +140,7 @@ void handle_input(void) {
       // start the game when first arrow key is pressed
       if (game.state == NOT_PLAYING) {
         game.state = PLAYING;
+        spawn_food();
       }  
       change_direction(e.key.keysym.sym);
     }
