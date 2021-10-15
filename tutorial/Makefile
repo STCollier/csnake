@@ -23,3 +23,6 @@ step-6:
 step-7:
 	cc -o $(OUT) step-7.c $(CFLAGS) $(CLIBS)
 	$(OUT)
+step-8:
+	cc -o $(OUT) step-8.c $(CFLAGS) $(CLIBS)
+	$(OUT)
