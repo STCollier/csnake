@@ -141,6 +141,7 @@ void handle_input(void) {
       if (game.state == NOT_PLAYING) {
         game.state = PLAYING;
         spawn_food();
+        update_title();
       }  
       change_direction(e.key.keysym.sym);
     }
@@ -201,20 +202,21 @@ void draw_snake(void) {
   // draw snake body
   for (int i = 1; i < sizeof(game.snake)/sizeof(game.snake[0]); i++) {
     // only draw active elements (assigned a width)
-    if (game.snake[i].w != 0) {
-      // Make the snake red when it's dead
-      if (game.state == GAME_OVER) {
-        SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
-      } else {
-        // draw green cell
-        SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
-      }
-      SDL_RenderFillRect(game.renderer, &game.snake[i]);
-
-      // create a black border around each snake body cell
-      SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
-      SDL_RenderDrawRect(game.renderer, &game.snake[i]);
+    if (game.snake[i].w == 0) {
+      break;
     }
+    // Make the snake red when it's dead
+    if (game.state == GAME_OVER) {
+      SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
+    } else {
+      // draw green cell
+      SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
+    }
+    SDL_RenderFillRect(game.renderer, &game.snake[i]);
+
+    // create a black border around each snake body cell
+    SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
+    SDL_RenderDrawRect(game.renderer, &game.snake[i]);
   }
   // draw the snake head
   if (game.state == GAME_OVER) {
