@@ -1,5 +1,5 @@
-# Snake Game (Made with C and SDL 2.0)
-Snake is a classic video game from the late 70s and became popular when Snake 2 was bundled with the Nokia 3310 in 2000.
+# Snake Game Made with C and SDL 2.0
+The code in this repository accompanies the tutorial I published on Medium: [Making a Snake Game with C and SDL][medium]. Snake is a classic video game from the late 70s. It became really popular in 2000 because it was bundled with the Nokia 3310. At the time, everyone wanted a Nokia because of this game.
 
 ![Snake Game](snake.gif)
 
@@ -27,3 +27,4 @@ Then run `make` or `make debug`.
 
 Note: this project is part of a tutorial I am writing on Medium and so far it has only been tested on macOS Big Sur.
 
+[medium]: https://0x544d.medium.com/making-a-snake-game-with-c-and-sdl-a6550955c357
