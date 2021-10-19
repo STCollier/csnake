@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <SDL.h>
 
+#define TARGET_FPS      50
+#define MS_PER_UPDATE   1000 / 30
+#define MS_PER_FRAME    1000 / TARGET_FPS
 #define SCREEN_WIDTH   680
 #define SCREEN_HEIGHT  400
 #define WALL_THICKNESS  20
@@ -9,12 +12,17 @@
 #define CELL_COUNT     ((SCREEN_WIDTH-WALL_THICKNESS*2)*     \
                         (SCREEN_HEIGHT-WALL_THICKNESS*2))/  \
                         (CELL_WIDTH*CELL_HEIGHT)
+
 #define SNAKE_START_X   200
 #define SNAKE_START_Y   200
+#define SNAKE_SPEED     8.0f
 
 void initialize(void);
 void terminate(int exit_code);
-void handle_input(void);
+void process_input(void);
+void update();
+void render();
+
 void draw_walls(void);
 void draw_snake(void);
 void spawn_snake(void);
@@ -23,7 +31,6 @@ void change_direction(SDL_KeyCode new_direction);
 void handle_collisions(void);
 void spawn_food(void);
 void draw_food(void);
-void update_title(void);
 void play_again(void);
 
 typedef enum Game_State {
@@ -36,10 +43,11 @@ typedef enum Game_State {
 typedef struct {
   SDL_Renderer *renderer;
 	SDL_Window *window;
+  SDL_FPoint head;
   SDL_Rect snake[CELL_COUNT];
   int running;
-  int dx;
-  int dy;
+  float dx;
+  float dy;
   SDL_Rect food;
   int score;
   Game_State state;
@@ -49,7 +57,7 @@ typedef struct {
 // and SDL renderer for use in all functions
 Game game = {
   .running = 1,
-  .dx = CELL_WIDTH,
+  .dx = SNAKE_SPEED,
   .food = {
     .w = CELL_WIDTH, .h = CELL_HEIGHT
   },
@@ -61,26 +69,50 @@ int main() {
   initialize();
 
   spawn_snake();
-  update_title();
 
-  // enter game loop
+  // some vars to keep track of frame rate
+  Uint32 previous = SDL_GetTicks();
+  Uint32 lag;
+
+  Uint32 previous_second = previous;
+  int frame_count = 0;
+
   while (game.running) {
-    // clear the screen with all black before drawing anything 
-    SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
-    SDL_RenderClear(game.renderer);
+    Uint32 current = SDL_GetTicks();
+    Uint32 elapsed = current - previous;
+    previous = current;
+    lag += elapsed;
 
-    handle_input();
-    move_snake();
+    process_input();
 
-    draw_food();
-    draw_snake();
-    draw_walls();
+    while (lag >= MS_PER_UPDATE) {
+      update();
+      lag -= MS_PER_UPDATE;
+    }
 
-    SDL_RenderPresent(game.renderer);
-    // wait 100 milliseconds before next iteration
-    SDL_Delay(100);
+    render();
+
+    frame_count++;
+
+      // time since work done
+    Uint32 frame_end = SDL_GetTicks();
+
+    // After every second, update the window title.
+    if (frame_end - previous_second >= 1000) {
+      char buffer[17];
+      snprintf(buffer, 17, "Snake (FPS: %d)", frame_count);
+      SDL_SetWindowTitle(game.window, buffer);
+      frame_count = 0;
+      previous_second = frame_end;
+    }
+    // If the time for this frame is too small (i.e. frame_duration is
+    // smaller than the target ms_per_frame), delay the loop to
+    // achieve the correct frame rate.
+    Uint32 frame_duration = frame_end - current;
+    if (frame_duration < MS_PER_FRAME) {
+      SDL_Delay(MS_PER_FRAME - frame_duration);
+    }
   }
-
   // make sure program cleans up on exit
   terminate(EXIT_SUCCESS);
 }
@@ -125,7 +157,7 @@ void terminate(int exit_code) {
   exit(exit_code);
 }
 
-void handle_input(void) {
+void process_input(void) {
   SDL_Event e;
   while (SDL_PollEvent(&e)) {
     if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)) {
@@ -141,7 +173,6 @@ void handle_input(void) {
       if (game.state == NOT_PLAYING) {
         game.state = PLAYING;
         spawn_food();
-        update_title();
       }  
       change_direction(e.key.keysym.sym);
     }
@@ -153,11 +184,9 @@ void handle_input(void) {
       case PAUSED:
         game.state = PLAYING;
         spawn_food();
-        update_title();
         break;
       case PLAYING:
         game.state = PAUSED;
-        update_title();
         break;
       case GAME_OVER:
         play_again();
@@ -167,6 +196,22 @@ void handle_input(void) {
       }
     }
   }
+}
+
+void update() {
+  move_snake();
+}
+
+void render() {
+    // clear the screen with all black before drawing anything 
+    SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
+    SDL_RenderClear(game.renderer);
+
+    draw_food();
+    draw_snake();
+    draw_walls();
+
+    SDL_RenderPresent(game.renderer);
 }
 
 void draw_walls(void) {
@@ -238,6 +283,8 @@ void spawn_snake(void) {
   }
 
   // the first element in the snake array is the head
+  game.head.x = SNAKE_START_X;
+  game.head.y = SNAKE_START_Y;
   game.snake[0].x = SNAKE_START_X;
   game.snake[0].y = SNAKE_START_Y;
   game.snake[0].w = CELL_WIDTH;
@@ -255,13 +302,28 @@ void move_snake(void) {
   if (game.state != PLAYING) {
     return;
   }
+
+  game.head.x = game.head.x + game.dx;
+  game.head.y = game.head.y + game.dy;
+
+  // work out if the new x and y has moved into a new grid cell
+  int old_x = (int)round(game.snake[0].x / CELL_WIDTH) * CELL_WIDTH;
+  int new_x = (int)round(game.head.x / CELL_WIDTH) * CELL_WIDTH;
+  int old_y = (int)round(game.snake[0].y / CELL_HEIGHT) * CELL_HEIGHT;
+  int new_y = (int)round(game.head.y / CELL_HEIGHT) * CELL_HEIGHT;
+
+  if (old_x == new_x && old_y == new_y) {
+    // Snake head hasn't moved into a new grid cell
+    return;
+  }
+
   // shift elements to right to make room for new head
   for (int i = sizeof(game.snake)/sizeof(game.snake[0])-1; i >= 0; i--) {
     game.snake[i] = game.snake[i-1];
   }
   // insert new head position at the begining
-  game.snake[0].x = game.snake[1].x + game.dx;
-  game.snake[0].y = game.snake[1].y + game.dy;
+  game.snake[0].x = new_x;
+  game.snake[0].y = new_y;
   game.snake[0].w = CELL_WIDTH;
   game.snake[0].h = CELL_HEIGHT;
 
@@ -270,7 +332,6 @@ void move_snake(void) {
   if (game.food.x == game.snake[0].x && game.food.y == game.snake[0].y) {
     spawn_food();
     game.score++;
-    update_title();
   } else {
     //remove the tail by finding the last inactive element in the Snake array
     //then zeroing out the one before it.
@@ -297,21 +358,21 @@ void change_direction(SDL_KeyCode new_direction) {
   // change the direction to up when the snake is not going down
   if (new_direction == SDLK_UP && !going_down) {
       game.dx = 0;
-      game.dy = -CELL_HEIGHT;
+      game.dy = -SNAKE_SPEED;
   }
   // change the direction to down when the snake is not going up
   if (new_direction == SDLK_DOWN && !going_up) {
       game.dx = 0;
-      game.dy = CELL_HEIGHT;
+      game.dy = SNAKE_SPEED;
   }
   // change the direction to left when the snake is not going right
   if (new_direction == SDLK_LEFT && !going_right) {
-      game.dx = -CELL_WIDTH;
+      game.dx = -SNAKE_SPEED;
       game.dy = 0;
   }
   // change the direction to right when the snake is not going left
   if (new_direction == SDLK_RIGHT && !going_left) {
-      game.dx = CELL_WIDTH;
+      game.dx = SNAKE_SPEED;
       game.dy = 0;
   }
 }
@@ -326,32 +387,27 @@ void handle_collisions(void) {
     // check the head has not run into active body elements
     if (game.snake[0].x == game.snake[i].x && game.snake[0].y == game.snake[i].y) {
       game.state = GAME_OVER;
-      update_title();
       return;
     }
   }
   // hit lift wall?
   if (game.snake[0].x < WALL_THICKNESS) {
     game.state = GAME_OVER;
-    update_title();
     return;
   }
   // hit right wall?
   if (game.snake[0].x > SCREEN_WIDTH - WALL_THICKNESS - CELL_WIDTH) {
     game.state = GAME_OVER;
-    update_title();
     return;
   }
   // hit top wall?
   if (game.snake[0].y < WALL_THICKNESS) {
     game.state = GAME_OVER;
-    update_title();
     return;
   }
   // hit bottoom wall?
   if (game.snake[0].y > SCREEN_HEIGHT - WALL_THICKNESS - CELL_HEIGHT) {
     game.state = GAME_OVER;
-    update_title();
     return;
   }
 }
@@ -388,38 +444,23 @@ void spawn_food() {
 }
 
 void draw_food() {
-  // make the food red
-  SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
+  // orange
+  SDL_SetRenderDrawColor(game.renderer, 255, 215, 0, 255);
+  if (game.score % 2 == 1) {
+    // red
+    SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
+    for (int i=0; i<10000; i++) {
+      SDL_RenderFillRect(game.renderer, &game.food);
+    }
+  }
   SDL_RenderFillRect(game.renderer, &game.food);
 }
 
-void update_title(void) {
-  if (game.state == NOT_PLAYING) {
-    SDL_SetWindowTitle(game.window, "PRESS ANY ARROW KEY TO START");
-  }
-  if (game.state == PLAYING) {
-    char buffer[20];
-    snprintf(buffer, 20, "SCORE: %d", game.score);
-    SDL_SetWindowTitle(game.window, buffer);
-  }
-  if (game.state == GAME_OVER) {
-    char buffer[60];
-    snprintf(buffer, 60, "GAME OVER - YOU SCORED: %d - PRESS SPACE TO PLAY AGAIN", game.score);
-    SDL_SetWindowTitle(game.window, buffer);
-  }
-  if (game.state == PAUSED) {
-    char buffer[31];
-    snprintf(buffer, 31, "PAUSED - PRESS SPACE TO RESUME");
-    SDL_SetWindowTitle(game.window, buffer);
-  }
-}
-
 void play_again(void) {
-  game.dx = CELL_WIDTH;
+  game.dx = SNAKE_SPEED;
   game.dy = 0;
   game.score = 0;
   game.state = PLAYING;
   spawn_snake();
   spawn_food();
-  update_title();
 }
