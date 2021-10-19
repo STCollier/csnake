@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <SDL.h>
 
-#define TARGET_FPS      50
+#define TARGET_FPS      30
 #define MS_PER_UPDATE   1000 / 30
 #define MS_PER_FRAME    1000 / TARGET_FPS
 #define SCREEN_WIDTH   680
@@ -377,30 +377,41 @@ void change_direction(SDL_KeyCode new_direction) {
     game.snake.skipped = new_direction;
     return;
   }
+
   if (new_direction == SDLK_UP && game.snake.current_direction != SDLK_DOWN) {
     game.snake.dx = 0;
     game.snake.dy = -SNAKE_SPEED;
     game.snake.current_direction = SDLK_UP;
     game.snake.direction_can_change = 0;
     printf("UP\n");
-  } else if (new_direction == SDLK_DOWN && game.snake.current_direction != SDLK_UP) {
+    return;
+  }
+
+  if (new_direction == SDLK_DOWN && game.snake.current_direction != SDLK_UP) {
     game.snake.dx = 0;
     game.snake.dy = SNAKE_SPEED;
     game.snake.current_direction = SDLK_DOWN;
     game.snake.direction_can_change = 0;
     printf("DOWN\n");
-  } else if (new_direction == SDLK_LEFT && game.snake.current_direction != SDLK_RIGHT) {
+    return;
+  }
+
+  if (new_direction == SDLK_LEFT && game.snake.current_direction != SDLK_RIGHT) {
     game.snake.dx = -SNAKE_SPEED;
     game.snake.dy = 0;
     game.snake.current_direction = SDLK_LEFT;
     game.snake.direction_can_change = 0;
     printf("LEFT\n");
-  } else if (new_direction == SDLK_RIGHT && game.snake.current_direction != SDLK_LEFT) {
+    return;
+  }
+
+  if (new_direction == SDLK_RIGHT && game.snake.current_direction != SDLK_LEFT) {
     game.snake.dx = SNAKE_SPEED;
     game.snake.dy = 0;
     game.snake.current_direction = SDLK_RIGHT;
     game.snake.direction_can_change = 0;
     printf("RIGHT\n");
+    return;
   }
 }
 
@@ -473,13 +484,13 @@ void spawn_food() {
 void draw_food() {
   // orange
   SDL_SetRenderDrawColor(game.renderer, 255, 215, 0, 255);
-  if (game.score % 2 == 1) {
-    // red
-    SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
-    for (int i=0; i<10000; i++) {
-      SDL_RenderFillRect(game.renderer, &game.food);
-    }
-  }
+  // if (game.score % 2 == 1) {
+  //   // red
+  //   SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
+  //   for (int i=0; i<200000; i++) {
+  //     SDL_RenderFillRect(game.renderer, &game.food);
+  //   }
+  // }
   SDL_RenderFillRect(game.renderer, &game.food);
 }
 
