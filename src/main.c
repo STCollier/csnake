@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <SDL.h>
 
-#define TARGET_FPS      30
+#define TARGET_FPS      300
 #define MS_PER_UPDATE   1000 / 30
 #define MS_PER_FRAME    1000 / TARGET_FPS
-#define SCREEN_WIDTH   680
-#define SCREEN_HEIGHT  400
+#define SCREEN_WIDTH   375
+#define SCREEN_HEIGHT  812 
 #define WALL_THICKNESS  20
 #define CELL_WIDTH      20
 #define CELL_HEIGHT     20
@@ -17,8 +17,8 @@
 #define SNAKE_START_Y   200
 #define SNAKE_SPEED     8.0f
 
-void initialize(void);
-void terminate(int exit_code);
+void init(void);
+void quit(int exit_code);
 void process_input(void);
 void update();
 void render();
@@ -63,7 +63,6 @@ typedef struct {
 // initialize global structure to store game state
 // and SDL renderer for use in all functions
 Game game = {
-  .running = 1,
   .food = {
     .w = CELL_WIDTH, .h = CELL_HEIGHT
   },
@@ -71,10 +70,9 @@ Game game = {
 };
 
 int main() {
-  // Initialize SDL and the relevant structures
-  initialize();
-
+  init();
   spawn_snake();
+  spawn_food();
 
   // some vars to keep track of frame rate
   Uint32 previous = SDL_GetTicks();
@@ -83,7 +81,7 @@ int main() {
   Uint32 previous_second = previous;
   int frame_count = 0;
 
-  while (game.running) {
+  while (1) {
     Uint32 current = SDL_GetTicks();
     Uint32 elapsed = current - previous;
     previous = current;
@@ -119,28 +117,26 @@ int main() {
       SDL_Delay(MS_PER_FRAME - frame_duration);
     }
   }
-  // make sure program cleans up on exit
-  terminate(EXIT_SUCCESS);
 }
 
-void initialize(void) {
+void init(void) {
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     printf("error: failed to initialize SDL: %s\n", SDL_GetError());
-		terminate(EXIT_FAILURE);
+		quit(EXIT_FAILURE);
   }
 
   // create the game window
-  game.window = SDL_CreateWindow("Score: 0", 
+  game.window = SDL_CreateWindow("Score: 0",
     SDL_WINDOWPOS_UNDEFINED, 
-    SDL_WINDOWPOS_UNDEFINED, 
+    SDL_WINDOWPOS_UNDEFINED,
     SCREEN_WIDTH, 
     SCREEN_HEIGHT,
-    SDL_WINDOW_SHOWN
+    SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
   );
 
 	if (!game.window) {
 		printf("error: failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
-		terminate(EXIT_FAILURE);
+		quit(EXIT_FAILURE);
 	}
 
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -148,11 +144,16 @@ void initialize(void) {
 
   if (!game.renderer) {
     printf("error: failed to create renderer: %s\n", SDL_GetError());
-    terminate(EXIT_FAILURE);
+    quit(EXIT_FAILURE);
   }
+
+  SDL_RenderSetLogicalSize(game.renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+  int w, h = 0;
+  SDL_GL_GetDrawableSize(game.window, &w, &h);
+  printf("w: %d h: %d\n", w, h);
 }
 
-void terminate(int exit_code) {
+void quit(int exit_code) {
   if (game.renderer) {
     SDL_DestroyRenderer(game.renderer);
 	}
@@ -167,7 +168,7 @@ void process_input(void) {
   SDL_Event e;
   while (SDL_PollEvent(&e)) {
     if (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)) {
-      game.running = 0;
+      quit(EXIT_SUCCESS);
     }
     // change the snake direction
     if (e.type == SDL_KEYDOWN && (e.key.keysym.sym == SDLK_UP 
@@ -178,7 +179,6 @@ void process_input(void) {
       // start the game when first arrow key is pressed
       if (game.state == NOT_PLAYING) {
         game.state = PLAYING;
-        spawn_food();
       }  
       change_direction(e.key.keysym.sym);
     }
@@ -189,7 +189,6 @@ void process_input(void) {
       {
       case PAUSED:
         game.state = PLAYING;
-        spawn_food();
         break;
       case PLAYING:
         game.state = PAUSED;
@@ -484,19 +483,12 @@ void spawn_food() {
 void draw_food() {
   // orange
   SDL_SetRenderDrawColor(game.renderer, 255, 215, 0, 255);
-  // if (game.score % 2 == 1) {
-  //   // red
-  //   SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
-  //   for (int i=0; i<200000; i++) {
-  //     SDL_RenderFillRect(game.renderer, &game.food);
-  //   }
-  // }
   SDL_RenderFillRect(game.renderer, &game.food);
 }
 
 void play_again(void) {
-  game.score = 0;
-  game.state = PLAYING;
   spawn_snake();
   spawn_food();
+  game.score = 0;
+  game.state = PLAYING;
 }
