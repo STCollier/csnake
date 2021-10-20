@@ -1,20 +1,26 @@
 #include <stdio.h>
 #include <SDL.h>
 
-#define TARGET_FPS      300
+#define TARGET_FPS      60
 #define MS_PER_UPDATE   1000 / 30
 #define MS_PER_FRAME    1000 / TARGET_FPS
-#define SCREEN_WIDTH   375
-#define SCREEN_HEIGHT  812 
-#define WALL_THICKNESS  20
+
+#define SCREEN_WIDTH    400
+#define SCREEN_HEIGHT   600
+#define WALL_THICKNESS  10
+#define TOP_MARGIN      10
+#define LEFT_MARGIN     10
+#define RIGHT_MARGIN    10
+#define BOTTOM_MARGIN   160
+
 #define CELL_WIDTH      20
 #define CELL_HEIGHT     20
 #define CELL_COUNT     ((SCREEN_WIDTH-WALL_THICKNESS*2)*     \
                         (SCREEN_HEIGHT-WALL_THICKNESS*2))/  \
                         (CELL_WIDTH*CELL_HEIGHT)
 
-#define SNAKE_START_X   200
-#define SNAKE_START_Y   200
+#define SNAKE_START_X   (SCREEN_WIDTH/2)-CELL_WIDTH-CELL_WIDTH
+#define SNAKE_START_Y   SCREEN_HEIGHT-BOTTOM_MARGIN-CELL_HEIGHT-CELL_HEIGHT
 #define SNAKE_SPEED     8.0f
 
 void init(void);
@@ -131,7 +137,7 @@ void init(void) {
     SDL_WINDOWPOS_UNDEFINED,
     SCREEN_WIDTH, 
     SCREEN_HEIGHT,
-    SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
+    SDL_WINDOW_SHOWN //| SDL_WINDOW_ALLOW_HIGHDPI
   );
 
 	if (!game.window) {
@@ -211,41 +217,47 @@ void render() {
     // clear the screen with all black before drawing anything 
     SDL_SetRenderDrawColor(game.renderer, 0, 0, 0, 255);
     SDL_RenderClear(game.renderer);
-
     draw_food();
     draw_snake();
     draw_walls();
-
     SDL_RenderPresent(game.renderer);
 }
 
 void draw_walls(void) {
-  // make the walls gray
+  // draw grey walls
   SDL_SetRenderDrawColor(game.renderer, 210, 209, 205, 255);
 
-  SDL_Rect block = {
-        .x = 0,
-        .y = 0,
-        .w = WALL_THICKNESS,
-        .h = SCREEN_HEIGHT
+  SDL_Rect left = {
+    .x = LEFT_MARGIN,
+    .y = TOP_MARGIN,
+    .w = WALL_THICKNESS,
+    .h = SCREEN_HEIGHT-BOTTOM_MARGIN
   };
+  SDL_RenderFillRect(game.renderer, &left);
 
-  // left wall
-  SDL_RenderFillRect(game.renderer, &block);
+  SDL_Rect right = {
+    .x = SCREEN_WIDTH-WALL_THICKNESS-RIGHT_MARGIN,
+    .y = TOP_MARGIN,
+    .w = WALL_THICKNESS,
+    .h = SCREEN_HEIGHT-BOTTOM_MARGIN
+  };
+  SDL_RenderFillRect(game.renderer, &right);
 
-  // right wall
-  block.x = SCREEN_WIDTH - WALL_THICKNESS;
-  SDL_RenderFillRect(game.renderer, &block);
+  SDL_Rect top = {
+    .x = LEFT_MARGIN,
+    .y = TOP_MARGIN,
+    .w = SCREEN_WIDTH-LEFT_MARGIN-RIGHT_MARGIN,
+    .h = WALL_THICKNESS
+  };
+  SDL_RenderFillRect(game.renderer, &top);
 
-  // top wall
-  block.x = 0;
-  block.w = SCREEN_WIDTH;
-  block.h = WALL_THICKNESS;
-  SDL_RenderFillRect(game.renderer, &block);
-
-  // bottom wall
-  block.y = SCREEN_HEIGHT - WALL_THICKNESS;
-  SDL_RenderFillRect(game.renderer, &block);
+  SDL_Rect bottom = {
+    .x = LEFT_MARGIN,
+    .y = SCREEN_HEIGHT-BOTTOM_MARGIN,
+    .w = SCREEN_WIDTH-LEFT_MARGIN-RIGHT_MARGIN,
+    .h = WALL_THICKNESS
+  };
+  SDL_RenderFillRect(game.renderer, &bottom);
 }
 
 void draw_snake(void) {
@@ -269,13 +281,10 @@ void draw_snake(void) {
     SDL_RenderDrawRect(game.renderer, &game.snake.body[i]);
   }
   // draw the snake head
-  if (game.state == GAME_OVER) {
-    SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
-  } else {
-    // draw green cell
+  if (game.state != GAME_OVER) {
     SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
+    SDL_RenderFillRect(game.renderer, &game.snake.body[0]);
   }
-  SDL_RenderFillRect(game.renderer, &game.snake.body[0]);
 }
 
 void spawn_snake(void) {
@@ -428,22 +437,22 @@ void handle_collisions(void) {
     }
   }
   // hit lift wall?
-  if (game.snake.body[0].x < WALL_THICKNESS) {
+  if (game.snake.body[0].x < WALL_THICKNESS+LEFT_MARGIN) {
     game.state = GAME_OVER;
     return;
   }
   // hit right wall?
-  if (game.snake.body[0].x > SCREEN_WIDTH - WALL_THICKNESS - CELL_WIDTH) {
+  if (game.snake.body[0].x > SCREEN_WIDTH-WALL_THICKNESS-CELL_WIDTH) {
     game.state = GAME_OVER;
     return;
   }
   // hit top wall?
-  if (game.snake.body[0].y < WALL_THICKNESS) {
+  if (game.snake.body[0].y < WALL_THICKNESS+TOP_MARGIN) {
     game.state = GAME_OVER;
     return;
   }
   // hit bottoom wall?
-  if (game.snake.body[0].y > SCREEN_HEIGHT - WALL_THICKNESS - CELL_HEIGHT) {
+  if (game.snake.body[0].y > SCREEN_HEIGHT-BOTTOM_MARGIN-WALL_THICKNESS) {
     game.state = GAME_OVER;
     return;
   }
@@ -451,20 +460,20 @@ void handle_collisions(void) {
 
 void spawn_food() {
   // generate a random number in multiples of 10 along the x axis that fits between the left and right walls 
-  game.food.x = (rand() % (((SCREEN_WIDTH - CELL_WIDTH - WALL_THICKNESS)/CELL_WIDTH)+1)*CELL_WIDTH);
+  game.food.x = (rand() % (((SCREEN_WIDTH-CELL_WIDTH-WALL_THICKNESS-RIGHT_MARGIN)/CELL_WIDTH)+1)*CELL_WIDTH);
   // generate a random number in multiples of 10 along the y axis that fits between the top and bottom walls 
-  game.food.y = (rand() % (((SCREEN_HEIGHT - CELL_HEIGHT - WALL_THICKNESS)/CELL_HEIGHT)+1)*CELL_HEIGHT);
+  game.food.y = (rand() % (((SCREEN_HEIGHT-CELL_HEIGHT-BOTTOM_MARGIN)/CELL_HEIGHT)+1)*CELL_HEIGHT);
 
   // if the random number generated is less than the thickness of the left wall,
   // make the food spawn next to the left wall
-  if (game.food.x < WALL_THICKNESS) {
-    game.food.x = WALL_THICKNESS;
+  if (game.food.x < WALL_THICKNESS+LEFT_MARGIN) {
+    game.food.x = WALL_THICKNESS+LEFT_MARGIN;
   }
 
   // if the random number generated is less than the thickness of the top wall,
   // make the food spawn next to the top wall
-  if (game.food.y < WALL_THICKNESS) {
-    game.food.y = WALL_THICKNESS;
+  if (game.food.y < WALL_THICKNESS+TOP_MARGIN) {
+    game.food.y = WALL_THICKNESS+TOP_MARGIN;
   }
 
   // only spawn the food if it does not touch the snake
