@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #define TARGET_FPS      60
 #define MS_PER_UPDATE   1000 / 30
@@ -8,16 +9,17 @@
 #define SCREEN_WIDTH    400
 #define SCREEN_HEIGHT   600
 #define WALL_THICKNESS  10
-#define TOP_MARGIN      10
+#define TOP_MARGIN      30
 #define LEFT_MARGIN     10
 #define RIGHT_MARGIN    10
 #define BOTTOM_MARGIN   160
 
 #define CELL_WIDTH      20
 #define CELL_HEIGHT     20
-#define CELL_COUNT     ((SCREEN_WIDTH-WALL_THICKNESS*2)*     \
-                        (SCREEN_HEIGHT-WALL_THICKNESS*2))/  \
-                        (CELL_WIDTH*CELL_HEIGHT)
+#define CELL_COUNT      1000
+// #define CELL_COUNT     ((SCREEN_WIDTH-LEFT_MARGIN-RIGHT_MARGIN-WALL_THICKNESS*2)*     \
+//                         (SCREEN_HEIGHT-TOP_MARGIN-BOTTOM_MARGIN-WALL_THICKNESS*2))/  \
+//                         (CELL_WIDTH*CELL_HEIGHT)
 
 #define SNAKE_START_X   (SCREEN_WIDTH/2)-CELL_WIDTH-CELL_WIDTH
 #define SNAKE_START_Y   SCREEN_HEIGHT-BOTTOM_MARGIN-CELL_HEIGHT-CELL_HEIGHT
@@ -38,6 +40,7 @@ void handle_collisions(void);
 void spawn_food(void);
 void draw_food(void);
 void play_again(void);
+void draw_ui(void);
 
 typedef enum Game_State {
   NOT_PLAYING = 0,
@@ -59,6 +62,7 @@ typedef struct Snake {
 typedef struct {
   SDL_Renderer *renderer;
 	SDL_Window *window;
+  TTF_Font *font;
   Game_State state;
   Snake snake;
   SDL_Rect food;
@@ -82,7 +86,7 @@ int main() {
 
   // some vars to keep track of frame rate
   Uint32 previous = SDL_GetTicks();
-  Uint32 lag;
+  Uint32 lag = 0;
 
   Uint32 previous_second = previous;
   int frame_count = 0;
@@ -131,6 +135,11 @@ void init(void) {
 		quit(EXIT_FAILURE);
   }
 
+  if (TTF_Init() < 0) {
+    printf("error: failed to initialize TTF %s\n", TTF_GetError());
+    quit(EXIT_FAILURE);
+  }
+
   // create the game window
   game.window = SDL_CreateWindow("Score: 0",
     SDL_WINDOWPOS_UNDEFINED, 
@@ -157,9 +166,19 @@ void init(void) {
   int w, h = 0;
   SDL_GL_GetDrawableSize(game.window, &w, &h);
   printf("w: %d h: %d\n", w, h);
+
+  game.font = TTF_OpenFont("fonts/verdana.ttf", 18);
+  if (!game.font) {
+    printf("error: failed to open font: %s\n", TTF_GetError());
+    quit(EXIT_FAILURE);
+  }
 }
 
 void quit(int exit_code) {
+  if (game.font) {
+    TTF_CloseFont(game.font);
+  }
+  TTF_Quit();
   if (game.renderer) {
     SDL_DestroyRenderer(game.renderer);
 	}
@@ -220,6 +239,7 @@ void render() {
     draw_food();
     draw_snake();
     draw_walls();
+    draw_ui();
     SDL_RenderPresent(game.renderer);
 }
 
@@ -231,7 +251,7 @@ void draw_walls(void) {
     .x = LEFT_MARGIN,
     .y = TOP_MARGIN,
     .w = WALL_THICKNESS,
-    .h = SCREEN_HEIGHT-BOTTOM_MARGIN
+    .h = SCREEN_HEIGHT-BOTTOM_MARGIN-TOP_MARGIN
   };
   SDL_RenderFillRect(game.renderer, &left);
 
@@ -239,7 +259,7 @@ void draw_walls(void) {
     .x = SCREEN_WIDTH-WALL_THICKNESS-RIGHT_MARGIN,
     .y = TOP_MARGIN,
     .w = WALL_THICKNESS,
-    .h = SCREEN_HEIGHT-BOTTOM_MARGIN
+    .h = SCREEN_HEIGHT-BOTTOM_MARGIN-TOP_MARGIN
   };
   SDL_RenderFillRect(game.renderer, &right);
 
@@ -262,7 +282,7 @@ void draw_walls(void) {
 
 void draw_snake(void) {
   // draw snake body
-  for (int i = 1; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
+  for (int i = 1; i < CELL_COUNT; i++) {
     // only draw active elements (assigned a width)
     if (game.snake.body[i].w == 0) {
       break;
@@ -294,7 +314,7 @@ void spawn_snake(void) {
   game.snake.dy = 0;
 
   // make all snake parts empty
-  for (int i = 0; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
+  for (int i = 0; i < CELL_COUNT; i++) {
     game.snake.body[i].x = 0;
     game.snake.body[i].y = 0;
     game.snake.body[i].w = 0;
@@ -337,7 +357,7 @@ void move_snake(void) {
   }
 
   // shift elements to right to make room for new head
-  for (int i = sizeof(game.snake.body)/sizeof(game.snake.body[0])-1; i >= 0; i--) {
+  for (int i = CELL_COUNT-1; i >= 0; i--) {
     game.snake.body[i] = game.snake.body[i-1];
   }
   // insert new head position at the begining
@@ -354,7 +374,7 @@ void move_snake(void) {
   } else {
     //remove the tail by finding the last inactive element in the Snake array
     //then zeroing out the one before it.
-    for (int i = 5; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
+    for (int i = 5; i < CELL_COUNT; i++) {
       if (game.snake.body[i].w == 0) {
         game.snake.body[i-1].x = 0;
         game.snake.body[i-1].y = 0;
@@ -425,7 +445,7 @@ void change_direction(SDL_KeyCode new_direction) {
 
 void handle_collisions(void) {
   // hit snake?
-  for (int i = 1; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
+  for (int i = 1; i < CELL_COUNT; i++) {
     // exit loop when at the end of the active elements of the snake body
     if (game.snake.body[i].w == 0) {
       break;
@@ -477,7 +497,7 @@ void spawn_food() {
   }
 
   // only spawn the food if it does not touch the snake
-  for (int i = 0; i < sizeof(game.snake.body)/sizeof(game.snake.body[0]); i++) {
+  for (int i = 0; i < CELL_COUNT; i++) {
     // exit loop when at the end of the active elements of the snake body
     if (game.snake.body[i].w == 0) {
       break;
@@ -500,4 +520,29 @@ void play_again(void) {
   spawn_food();
   game.score = 0;
   game.state = PLAYING;
+}
+
+void draw_ui(void) {
+  SDL_Color color = {255, 255, 255, 255};
+  char buf[6];
+  snprintf(buf, 6, "%04d", game.score);
+
+  SDL_Surface *surface = TTF_RenderText_Solid(game.font, buf, color);
+  if (!surface) {
+    printf("error: failed to create text surface: %s\n", TTF_GetError());
+    quit(EXIT_FAILURE);
+  }
+
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(game.renderer, surface);
+  if (!texture) {
+    printf("error: failed to create texture: %s\n", SDL_GetError());
+    quit(EXIT_FAILURE);
+  }
+
+  SDL_Rect rect = { .x = 10, .y = 2 };
+  SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
+  SDL_RenderCopy(game.renderer, texture, NULL, &rect);
+  
+  SDL_FreeSurface(surface);
+  SDL_DestroyTexture(texture);
 }
