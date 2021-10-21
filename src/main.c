@@ -25,23 +25,6 @@
 #define SNAKE_START_Y   SCREEN_HEIGHT-BOTTOM_MARGIN-CELL_HEIGHT-CELL_HEIGHT
 #define SNAKE_SPEED     8.0f
 
-void init(void);
-void quit(int exit_code);
-void process_input(void);
-void update();
-void render();
-
-void draw_walls(void);
-void draw_snake(void);
-void spawn_snake(void);
-void move_snake(void);
-void change_direction(SDL_KeyCode new_direction);
-void handle_collisions(void);
-void spawn_food(void);
-void draw_food(void);
-void play_again(void);
-void draw_ui(void);
-
 typedef enum Game_State {
   NOT_PLAYING = 0,
   PLAYING = 1,
@@ -62,13 +45,33 @@ typedef struct Snake {
 typedef struct {
   SDL_Renderer *renderer;
 	SDL_Window *window;
-  TTF_Font *font;
+  TTF_Font *score_font;
+  SDL_Surface *score_surface;
+  SDL_Texture *score_texture;
   Game_State state;
   Snake snake;
   SDL_Rect food;
   int running;
   int score;
 } Game;
+
+void init(void);
+void quit(int exit_code);
+void process_input(void);
+void update();
+void render();
+
+void draw_walls(void);
+void draw_snake(void);
+void spawn_snake(void);
+void move_snake(void);
+void change_direction(SDL_KeyCode new_direction);
+void handle_collisions(void);
+void spawn_food(void);
+void draw_food(void);
+void play_again(void);
+void draw_ui(void);
+void update_score(void);
 
 // initialize global structure to store game state
 // and SDL renderer for use in all functions
@@ -167,24 +170,33 @@ void init(void) {
   SDL_GL_GetDrawableSize(game.window, &w, &h);
   printf("w: %d h: %d\n", w, h);
 
-  game.font = TTF_OpenFont("fonts/verdana.ttf", 18);
-  if (!game.font) {
+  game.score_font = TTF_OpenFont("fonts/verdana.ttf", 18);
+  if (!game.score_font) {
     printf("error: failed to open font: %s\n", TTF_GetError());
+    quit(EXIT_FAILURE);
+  }
+
+  SDL_Color color = {255, 255, 255, 255};
+  game.score_surface = TTF_RenderText_Blended(game.score_font, "0000", color);
+  if (!game.score_surface) {
+    printf("error: failed to create text surface: %s\n", TTF_GetError());
+    quit(EXIT_FAILURE);
+  }
+
+  game.score_texture = SDL_CreateTextureFromSurface(game.renderer, game.score_surface);
+  if (!game.score_texture) {
+    printf("error: failed to create texture: %s\n", SDL_GetError());
     quit(EXIT_FAILURE);
   }
 }
 
 void quit(int exit_code) {
-  if (game.font) {
-    TTF_CloseFont(game.font);
-  }
+  SDL_FreeSurface(game.score_surface);
+  SDL_DestroyTexture(game.score_texture); 
+  TTF_CloseFont(game.score_font);
   TTF_Quit();
-  if (game.renderer) {
-    SDL_DestroyRenderer(game.renderer);
-	}
-  if (game.window) {
-    SDL_DestroyWindow(game.window);
-  }
+  SDL_DestroyRenderer(game.renderer);
+	SDL_DestroyWindow(game.window);
   SDL_Quit();
   exit(exit_code);
 }
@@ -371,6 +383,8 @@ void move_snake(void) {
   if (game.food.x == game.snake.body[0].x && game.food.y == game.snake.body[0].y) {
     spawn_food();
     game.score++;
+    update_score();
+
   } else {
     //remove the tail by finding the last inactive element in the Snake array
     //then zeroing out the one before it.
@@ -391,9 +405,9 @@ void move_snake(void) {
   // if player tried to change direction too quick we could have crashed back 
   // into ourself, but now snake has moved change the direction with the
   // queued input
-  if (game.snake.skipped != -1) {
+  if (game.snake.skipped != SDLK_ESCAPE) {
     change_direction(game.snake.skipped);
-    game.snake.skipped = -1;
+    game.snake.skipped = SDLK_ESCAPE;
   }
 
   handle_collisions();
@@ -519,30 +533,36 @@ void play_again(void) {
   spawn_snake();
   spawn_food();
   game.score = 0;
+  update_score();
   game.state = PLAYING;
 }
 
 void draw_ui(void) {
-  SDL_Color color = {255, 255, 255, 255};
-  char buf[6];
-  snprintf(buf, 6, "%04d", game.score);
+  SDL_Rect rect = { .x = 10, .y = 2 };
+  SDL_QueryTexture(game.score_texture, NULL, NULL, &rect.w, &rect.h);
+  SDL_RenderCopy(game.renderer, game.score_texture, NULL, &rect);
+}
 
-  SDL_Surface *surface = TTF_RenderText_Solid(game.font, buf, color);
-  if (!surface) {
+void update_score() {
+
+  char score_text[6];
+  snprintf(score_text, 6, "%04d", game.score);
+
+  //free(game.score_surface);
+  //SDL_FreeSurface(game.score_surface);
+  SDL_DestroyTexture(game.score_texture);
+
+  SDL_Color color = {255, 255, 255, 255};
+  // TODO: Fix bug where calling TTF_RenderText_Blended crashes after calling SDL_FreeSurface
+  game.score_surface = TTF_RenderText_Blended(game.score_font, score_text, color);
+  if (!game.score_surface) {
     printf("error: failed to create text surface: %s\n", TTF_GetError());
     quit(EXIT_FAILURE);
   }
 
-  SDL_Texture *texture = SDL_CreateTextureFromSurface(game.renderer, surface);
-  if (!texture) {
+  game.score_texture = SDL_CreateTextureFromSurface(game.renderer, game.score_surface);
+  if (!game.score_texture) {
     printf("error: failed to create texture: %s\n", SDL_GetError());
     quit(EXIT_FAILURE);
   }
-
-  SDL_Rect rect = { .x = 10, .y = 2 };
-  SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
-  SDL_RenderCopy(game.renderer, texture, NULL, &rect);
-  
-  SDL_FreeSurface(surface);
-  SDL_DestroyTexture(texture);
 }
