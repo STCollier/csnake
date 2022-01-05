@@ -19,7 +19,7 @@ void draw_walls(void);
 void draw_snake(void);
 void spawn_snake(void);
 void move_snake(void);
-void change_direction(SDL_KeyCode new_direction);
+void change_direction(SDL_Keycode new_direction);
 void handle_collisions(void);
 void spawn_food(void);
 void draw_food(void);
@@ -285,7 +285,7 @@ void move_snake(void) {
   handle_collisions();
 }
 
-void change_direction(SDL_KeyCode new_direction) {
+void change_direction(SDL_Keycode new_direction) {
   // work out what direction the snake is going
   int going_up = game.dy == -CELL_HEIGHT;
   int going_down = game.dy == CELL_HEIGHT;
